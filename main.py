@@ -98,7 +98,7 @@ def renderizar_sidebar() -> None:
             if st.button(
                 f"{icone}  {label}",
                 key=f"nav_{key}",
-                use_container_width=True,
+                width='stretch',
             ):
                 # Limpar estados de edição ao navegar
                 st.session_state["ver_detalhe_id"] = None
@@ -110,7 +110,7 @@ def renderizar_sidebar() -> None:
         st.markdown("<div style='height: 1px; background: rgba(255,255,255,0.06); margin: 1rem 0;'></div>", unsafe_allow_html=True)
 
         # Botão de logout
-        if st.button("🚪  Sair do Sistema", use_container_width=True, key="btn_logout"):
+        if st.button("🚪  Sair do Sistema", width='stretch', key="btn_logout"):
             logout()
 
         # Rodapé da sidebar

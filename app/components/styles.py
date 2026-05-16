@@ -217,9 +217,17 @@ def aplicar_estilos() -> str:
         }
 
         /* Ocultar menu do Streamlit */
-        #MainMenu { visibility: hidden; }
-        footer { visibility: hidden; }
-        header { visibility: hidden; }
+        #MainMenu {
+            visibility: hidden;
+        }
+
+        footer {
+            visibility: hidden;
+        }
+
+        header {
+            background: transparent !important;
+        }
     </style>
     """
 

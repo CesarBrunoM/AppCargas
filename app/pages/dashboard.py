@@ -72,7 +72,7 @@ def mostrar_dashboard() -> None:
             <div style="font-size: 0.82rem; color: #64748B; font-family: 'DM Sans', sans-serif;">Registrar novo agendamento</div>
         </div>
         """, unsafe_allow_html=True)
-        if st.button("➕ Registrar Nova Carga", use_container_width=True, type="primary", key="btn_nova_carga"):
+        if st.button("➕ Registrar Nova Carga", width='stretch', type="primary", key="btn_nova_carga"):
             st.session_state["pagina_ativa"] = "nova_carga"
             st.rerun()
 
@@ -96,7 +96,7 @@ def mostrar_dashboard() -> None:
             <div style="font-size: 0.82rem; color: #64748B; font-family: 'DM Sans', sans-serif;">Pesquisar e filtrar registros</div>
         </div>
         """, unsafe_allow_html=True)
-        if st.button("🔍 Ver Todas as Cargas", use_container_width=True, key="btn_consultar"):
+        if st.button("🔍 Ver Todas as Cargas", width='stretch', key="btn_consultar"):
             st.session_state["pagina_ativa"] = "consultar"
             st.rerun()
 
@@ -175,7 +175,7 @@ def mostrar_dashboard() -> None:
                 plot_bgcolor="rgba(0,0,0,0)",
                 font_family="DM Sans",
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
 
         with col_graf2:
             # Cargas por mês
@@ -204,7 +204,7 @@ def mostrar_dashboard() -> None:
                     yaxis=dict(gridcolor="#F1F5F9"),
                     xaxis=dict(gridcolor="rgba(0,0,0,0)"),
                 )
-                st.plotly_chart(fig2, use_container_width=True)
+                st.plotly_chart(fig2, width='stretch')
 
         # === ÚLTIMAS CARGAS ===
         st.markdown("### 🕐 Últimas Cargas Registradas")
@@ -212,7 +212,7 @@ def mostrar_dashboard() -> None:
 
         st.dataframe(
             ultimas,
-            use_container_width=True,
+            width='stretch',
             hide_index=True,
             column_config={
                 "ID": st.column_config.NumberColumn("ID", width="small"),
