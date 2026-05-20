@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Página de edição de carga existente.
 """
@@ -6,8 +7,13 @@ from datetime import date
 from app.database import get_db
 from app.services import buscar_carga_por_id, atualizar_carga
 from app.models import StatusCarga
-from app.components import page_header, divider, status_badge
-from app.utils.helpers import formatar_preco, formatar_data, validar_placa, formatar_placa
+from app.components import (
+    page_header, divider, status_badge,
+    notificar, exibir_notificacoes, redirecionar_apos_salvar,
+)
+from app.utils.helpers import (
+    formatar_preco, formatar_data, validar_placa, formatar_placa, status_cor,
+)
 
 STATUS_OPCOES = [s.value for s in StatusCarga]
 
@@ -25,6 +31,10 @@ TAMANHOS_CARGA = [
 
 def mostrar_editar_carga(carga_id: int) -> None:
     """Renderiza o formulário de edição de carga."""
+
+    # Exibe notificações pendentes
+    exibir_notificacoes()
+
     db = get_db()
     try:
         carga = buscar_carga_por_id(db, carga_id)
@@ -38,7 +48,7 @@ def mostrar_editar_carga(carga_id: int) -> None:
             st.rerun()
         return
 
-    # Header
+    # Header com status atual
     col_title, col_badge = st.columns([3, 1])
     with col_title:
         page_header(
@@ -56,10 +66,9 @@ def mostrar_editar_carga(carga_id: int) -> None:
         st.session_state.pop("editar_carga_id", None)
         st.rerun()
 
-    # === ABAS ===
     aba_operacional, aba_agendamento = st.tabs(["📊 Dados Operacionais", "📋 Dados do Agendamento"])
 
-    # === ABA 1: DADOS OPERACIONAIS ===
+    # ─── ABA 1: DADOS OPERACIONAIS ───────────────────────────────────────────
     with aba_operacional:
         divider("Atualizar Status e Dados Operacionais")
 
@@ -67,7 +76,6 @@ def mostrar_editar_carga(carga_id: int) -> None:
             col1, col2 = st.columns(2)
 
             with col1:
-                # Status com índice atual
                 idx_status = STATUS_OPCOES.index(carga.status) if carga.status in STATUS_OPCOES else 0
                 novo_status = st.selectbox(
                     "📌 Status *",
@@ -75,26 +83,14 @@ def mostrar_editar_carga(carga_id: int) -> None:
                     index=idx_status,
                     help="Atualize o status operacional da carga"
                 )
-
-                # Cor indicadora do status selecionado
-                from app.utils.helpers import status_cor
                 cor = status_cor(novo_status)
                 st.markdown(f"""
                 <div style="
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 6px;
-                    padding: 6px 12px;
-                    background: {cor}20;
-                    border: 1px solid {cor}60;
-                    border-radius: 8px;
-                    font-size: 0.82rem;
-                    font-weight: 600;
-                    color: {cor};
-                    margin-top: 4px;
-                ">
-                    Novo status: {novo_status}
-                </div>
+                    display: inline-flex; align-items: center; gap: 6px;
+                    padding: 6px 12px; background: {cor}20;
+                    border: 1px solid {cor}60; border-radius: 8px;
+                    font-size: 0.82rem; font-weight: 600; color: {cor}; margin-top: 4px;
+                ">Novo status: {novo_status}</div>
                 """, unsafe_allow_html=True)
 
             with col2:
@@ -126,7 +122,7 @@ def mostrar_editar_carga(carga_id: int) -> None:
 
             submitted_op = st.form_submit_button(
                 "💾 Salvar Alterações Operacionais",
-                width='stretch',
+                use_container_width=True,
                 type="primary"
             )
 
@@ -137,24 +133,32 @@ def mostrar_editar_carga(carga_id: int) -> None:
                 "peso_caminhao": peso_caminhao if peso_caminhao > 0 else None,
                 "observacoes": observacoes.strip() if observacoes else None,
             }
-
             db = get_db()
             try:
                 atualizado = atualizar_carga(db, carga_id, dados)
                 if atualizado:
-                    st.success(f"✅ Dados operacionais da Carga #{carga_id} atualizados com sucesso!")
-                    # Forçar recarga da carga
-                    st.rerun()
+                    notificar(
+                        mensagem=(
+                            f"Dados operacionais da Carga <strong>#{carga_id}</strong> atualizados com sucesso! "
+                            f"Novo status: <strong>{novo_status}</strong>."
+                        ),
+                        tipo="sucesso",
+                        icone="📊",
+                    )
+                    redirecionar_apos_salvar(
+                        pagina_destino="consultar",
+                        segundos=2,
+                        limpar_keys=["editar_carga_id"],
+                    )
                 else:
                     st.error("❌ Erro ao atualizar. Tente novamente.")
             finally:
                 db.close()
 
-    # === ABA 2: DADOS DO AGENDAMENTO ===
+    # ─── ABA 2: DADOS DO AGENDAMENTO ─────────────────────────────────────────
     with aba_agendamento:
         divider("Editar Dados do Agendamento")
 
-        # Índice do tamanho atual
         idx_tamanho = TAMANHOS_CARGA.index(carga.tamanho) if carga.tamanho in TAMANHOS_CARGA else 0
 
         with st.form("form_agendamento"):
@@ -166,47 +170,23 @@ def mostrar_editar_carga(carga_id: int) -> None:
                     format="DD/MM/YYYY",
                 )
             with col2:
-                novo_cliente = st.text_input(
-                    "🏢 Cliente",
-                    value=carga.cliente,
-                    max_chars=150,
-                )
+                novo_cliente = st.text_input("🏢 Cliente", value=carga.cliente, max_chars=150)
 
             col3, col4 = st.columns(2)
             with col3:
-                novo_carregador = st.text_input(
-                    "👷 Carregador",
-                    value=carga.carregador,
-                    max_chars=150,
-                )
+                novo_carregador = st.text_input("👷 Carregador", value=carga.carregador, max_chars=150)
             with col4:
-                novo_tamanho = st.selectbox(
-                    "🚛 Tamanho",
-                    options=TAMANHOS_CARGA,
-                    index=idx_tamanho,
-                )
+                novo_tamanho = st.selectbox("🚛 Tamanho", options=TAMANHOS_CARGA, index=idx_tamanho)
 
             col5, col6 = st.columns([2, 1])
             with col5:
-                novo_motorista = st.text_input(
-                    "👤 Motorista",
-                    value=carga.motorista,
-                    max_chars=150,
-                )
+                novo_motorista = st.text_input("👤 Motorista", value=carga.motorista, max_chars=150)
             with col6:
-                nova_placa = st.text_input(
-                    "🔤 Placa",
-                    value=carga.placa,
-                    max_chars=8,
-                )
+                nova_placa = st.text_input("🔤 Placa", value=carga.placa, max_chars=8)
 
             col7, col8 = st.columns([2, 1])
             with col7:
-                novo_destino = st.text_input(
-                    "📍 Destino",
-                    value=carga.destino,
-                    max_chars=200,
-                )
+                novo_destino = st.text_input("📍 Destino", value=carga.destino, max_chars=200)
             with col8:
                 novo_preco = st.number_input(
                     "💰 Preço (R$)",
@@ -218,7 +198,7 @@ def mostrar_editar_carga(carga_id: int) -> None:
 
             submitted_ag = st.form_submit_button(
                 "💾 Salvar Dados do Agendamento",
-                width='stretch',
+                use_container_width=True,
                 type="primary"
             )
 
@@ -251,19 +231,31 @@ def mostrar_editar_carga(carga_id: int) -> None:
                     "destino": novo_destino.strip(),
                     "preco": novo_preco,
                 }
-
                 db = get_db()
                 try:
                     atualizado = atualizar_carga(db, carga_id, dados_ag)
                     if atualizado:
-                        st.success(f"✅ Agendamento da Carga #{carga_id} atualizado com sucesso!")
-                        st.rerun()
+                        notificar(
+                            mensagem=(
+                                f"Agendamento da Carga <strong>#{carga_id}</strong> atualizado com sucesso! "
+                                f"Cliente: <strong>{novo_cliente.strip()}</strong> &nbsp;·&nbsp; "
+                                f"Destino: <strong>{novo_destino.strip()}</strong> &nbsp;·&nbsp; "
+                                f"Valor: <strong>{formatar_preco(novo_preco)}</strong>."
+                            ),
+                            tipo="sucesso",
+                            icone="📋",
+                        )
+                        redirecionar_apos_salvar(
+                            pagina_destino="consultar",
+                            segundos=2,
+                            limpar_keys=["editar_carga_id"],
+                        )
                     else:
                         st.error("❌ Erro ao atualizar. Tente novamente.")
                 finally:
                     db.close()
 
-    # === RESUMO ATUAL ===
+    # Resumo atual colapsável
     with st.expander("📄 Ver dados atuais da carga", expanded=False):
         col_r1, col_r2, col_r3 = st.columns(3)
         with col_r1:

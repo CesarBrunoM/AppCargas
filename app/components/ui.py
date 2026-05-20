@@ -1,8 +1,140 @@
 """
 Componentes de UI reutilizáveis.
 """
+import time
 import streamlit as st
 from app.utils.helpers import status_cor, status_emoji
+
+# ─────────────────────────────────────────────────────────────
+#  SISTEMA DE NOTIFICAÇÕES / FOLLOW-UP
+# ─────────────────────────────────────────────────────────────
+
+def notificar(mensagem: str, tipo: str = "sucesso", icone: str = "") -> None:
+    """
+    Armazena uma notificação na sessão para ser exibida na próxima renderização.
+    tipo: "sucesso" | "erro" | "aviso" | "info"
+    """
+    if "notificacoes" not in st.session_state:
+        st.session_state["notificacoes"] = []
+    st.session_state["notificacoes"].append({
+        "mensagem": mensagem,
+        "tipo": tipo,
+        "icone": icone,
+    })
+
+
+def exibir_notificacoes() -> None:
+    """
+    Exibe e limpa todas as notificações pendentes da sessão.
+    Chame no topo de cada página para garantir que o toast apareça após redirect.
+    """
+    notificacoes = st.session_state.pop("notificacoes", [])
+    for n in notificacoes:
+        _renderizar_toast(n["mensagem"], n["tipo"], n["icone"])
+
+
+def _renderizar_toast(mensagem: str, tipo: str, icone: str) -> None:
+    """Renderiza um toast/banner visual de notificação."""
+    estilos = {
+        "sucesso": {
+            "bg": "#F0FDF4", "border": "#4ADE80", "texto": "#14532D",
+            "icone_pad": "✅", "titulo": "Operação realizada com sucesso",
+        },
+        "erro": {
+            "bg": "#FEF2F2", "border": "#F87171", "texto": "#7F1D1D",
+            "icone_pad": "❌", "titulo": "Ocorreu um erro",
+        },
+        "aviso": {
+            "bg": "#FFFBEB", "border": "#FCD34D", "texto": "#78350F",
+            "icone_pad": "⚠️", "titulo": "Atenção",
+        },
+        "info": {
+            "bg": "#EFF6FF", "border": "#60A5FA", "texto": "#1E3A8A",
+            "icone_pad": "ℹ️", "titulo": "Informação",
+        },
+    }
+    s = estilos.get(tipo, estilos["info"])
+    icone_final = icone or s["icone_pad"]
+
+    st.markdown(f"""
+    <div style="
+        display: flex;
+        align-items: flex-start;
+        gap: 0.875rem;
+        background: {s['bg']};
+        border: 1.5px solid {s['border']};
+        border-left: 5px solid {s['border']};
+        border-radius: 10px;
+        padding: 1rem 1.25rem;
+        margin-bottom: 1.25rem;
+        animation: slideIn 0.3s ease;
+        font-family: 'DM Sans', sans-serif;
+    ">
+        <div style="font-size: 1.4rem; line-height: 1; flex-shrink: 0;">{icone_final}</div>
+        <div>
+            <div style="font-weight: 700; color: {s['texto']}; font-size: 0.88rem; margin-bottom: 2px;">
+                {s['titulo']}
+            </div>
+            <div style="color: {s['texto']}; font-size: 0.85rem; opacity: 0.9;">{mensagem}</div>
+        </div>
+    </div>
+    <style>
+        @keyframes slideIn {{
+            from {{ opacity: 0; transform: translateY(-8px); }}
+            to   {{ opacity: 1; transform: translateY(0); }}
+        }}
+    </style>
+    """, unsafe_allow_html=True)
+
+
+def redirecionar_apos_salvar(
+    pagina_destino: str,
+    segundos: int = 2,
+    limpar_keys: list = None,
+) -> None:
+    """
+    Exibe um banner de sucesso com countdown e redireciona automaticamente.
+    Deve ser chamado APÓS notificar().
+    """
+    limpar_keys = limpar_keys or []
+
+    placeholder = st.empty()
+
+    for i in range(segundos, 0, -1):
+        with placeholder.container():
+            st.markdown(f"""
+            <div style="
+                display: flex;
+                align-items: center;
+                gap: 0.875rem;
+                background: #EFF6FF;
+                border: 1.5px solid #60A5FA;
+                border-left: 5px solid #3B82F6;
+                border-radius: 10px;
+                padding: 0.875rem 1.25rem;
+                font-family: 'DM Sans', sans-serif;
+            ">
+                <div style="font-size: 1.25rem; flex-shrink: 0;">🔄</div>
+                <div>
+                    <div style="font-weight: 700; color: #1E3A8A; font-size: 0.85rem;">
+                        Redirecionando em {i} segundo{'s' if i > 1 else ''}...
+                    </div>
+                    <div style="color: #3B82F6; font-size: 0.78rem; margin-top: 2px;">
+                        Você será levado automaticamente para a tela de consulta.
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        time.sleep(1)
+
+    placeholder.empty()
+
+    # Limpar estados antes de redirecionar
+    for key in limpar_keys:
+        st.session_state.pop(key, None)
+
+    st.session_state["pagina_ativa"] = pagina_destino
+    st.rerun()
 
 
 def page_header(titulo: str, subtitulo: str = "", icone: str = "") -> None:

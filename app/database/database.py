@@ -33,12 +33,33 @@ def get_db() -> Session:
 def init_db() -> None:
     """
     Cria todas as tabelas e insere dados iniciais se necessário.
+    Executa migrações automáticas para colunas novas.
     Deve ser chamado na inicialização da aplicação.
     """
     logger.info("Inicializando banco de dados...")
     Base.metadata.create_all(bind=engine)
+    _migrar_colunas()
     _criar_usuario_admin()
     logger.info("Banco de dados inicializado com sucesso.")
+
+
+def _migrar_colunas() -> None:
+    """Adiciona colunas novas em tabelas existentes (migrações simples via ALTER TABLE)."""
+    from sqlalchemy import text, inspect
+    insp = inspect(engine)
+    with engine.connect() as conn:
+        # Tabela usuarios — colunas adicionadas na versão com perfil/email
+        colunas_usuarios = [col["name"] for col in insp.get_columns("usuarios")]
+        if "email" not in colunas_usuarios:
+            conn.execute(text("ALTER TABLE usuarios ADD COLUMN email VARCHAR(150)"))
+            logger.info("Coluna 'email' adicionada à tabela usuarios.")
+        if "perfil" not in colunas_usuarios:
+            conn.execute(text("ALTER TABLE usuarios ADD COLUMN perfil VARCHAR(30) DEFAULT 'Administrador'"))
+            logger.info("Coluna 'perfil' adicionada à tabela usuarios.")
+        if "atualizado_em" not in colunas_usuarios:
+            conn.execute(text("ALTER TABLE usuarios ADD COLUMN atualizado_em DATETIME"))
+            logger.info("Coluna 'atualizado_em' adicionada à tabela usuarios.")
+        conn.commit()
 
 
 def _criar_usuario_admin() -> None:

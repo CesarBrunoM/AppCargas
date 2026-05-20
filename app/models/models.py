@@ -19,6 +19,11 @@ class StatusCarga(str, enum.Enum):
     CANCELADO = "Cancelado"
 
 
+class PerfilUsuario(str, enum.Enum):
+    ADMIN = "Administrador"
+    OPERADOR = "Operador"
+
+
 class Usuario(Base):
     """Modelo de usuário do sistema."""
     __tablename__ = "usuarios"
@@ -26,9 +31,12 @@ class Usuario(Base):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(50), unique=True, nullable=False, index=True)
     nome = Column(String(100), nullable=False)
+    email = Column(String(150), nullable=True)
     senha_hash = Column(String(256), nullable=False)
+    perfil = Column(String(30), default=PerfilUsuario.OPERADOR.value, nullable=False)
     ativo = Column(Integer, default=1)  # 1=ativo, 0=inativo
     criado_em = Column(DateTime, default=datetime.utcnow)
+    atualizado_em = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 class Carga(Base):

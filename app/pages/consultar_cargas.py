@@ -7,9 +7,9 @@ import pandas as pd
 from datetime import date, timedelta
 from typing import Optional
 from app.database import get_db
-from app.services import listar_cargas, cargas_para_dataframe, buscar_carga_por_id
+from app.services import listar_cargas, cargas_para_dataframe, buscar_carga_por_id, gerar_pdf_carga, gerar_pdf_relatorio
 from app.models import StatusCarga
-from app.components import page_header, divider, status_badge, info_row
+from app.components import page_header, divider, status_badge, info_row, exibir_notificacoes
 from app.utils.helpers import formatar_preco, formatar_data, status_emoji
 
 # Itens por página
@@ -19,6 +19,10 @@ STATUS_OPCOES = ["Todos"] + [s.value for s in StatusCarga]
 
 def mostrar_consultar_cargas() -> None:
     """Renderiza a tela de consulta de cargas."""
+
+    # Exibe notificações vindas de outras telas (ex: após salvar nova carga ou edição)
+    exibir_notificacoes()
+
     page_header(
         titulo="Consultar Cargas",
         subtitulo="Pesquise, filtre e gerencie todos os registros de carga.",
@@ -119,9 +123,11 @@ def mostrar_consultar_cargas() -> None:
         st.info("📭 Nenhuma carga encontrada com os filtros aplicados.")
         return
 
-    # Botão de exportação
-    col_exp, col_info = st.columns([1, 3])
-    with col_exp:
+    # Botões de exportação
+    col_exp_xls, col_exp_pdf, col_info = st.columns([1, 1, 2])
+
+    # Excel
+    with col_exp_xls:
         buffer = io.BytesIO()
         with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
             df.to_excel(writer, index=False, sheet_name="Cargas")
@@ -130,7 +136,32 @@ def mostrar_consultar_cargas() -> None:
             data=buffer.getvalue(),
             file_name=f"cargas_{date.today().strftime('%Y%m%d')}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            width='stretch',
+            use_container_width=True,
+        )
+
+    # PDF — relatório com os filtros aplicados
+    with col_exp_pdf:
+        # Descreve os filtros ativos para o rodapé do PDF
+        partes_filtro = []
+        if termo_busca:
+            partes_filtro.append(f"Busca: \"{termo_busca}\"")
+        if cliente_filtro:
+            partes_filtro.append(f"Cliente: {cliente_filtro}")
+        if motorista_filtro:
+            partes_filtro.append(f"Motorista: {motorista_filtro}")
+        if status_filtro != "Todos":
+            partes_filtro.append(f"Status: {status_filtro}")
+        if periodo != "Todos":
+            partes_filtro.append(f"Período: {periodo}")
+        filtros_desc = " · ".join(partes_filtro) if partes_filtro else "Todas as cargas"
+
+        pdf_bytes = gerar_pdf_relatorio(cargas, filtros_desc)
+        st.download_button(
+            label="🖨️ Relatório PDF",
+            data=pdf_bytes,
+            file_name=f"relatorio_cargas_{date.today().strftime('%Y%m%d')}.pdf",
+            mime="application/pdf",
+            use_container_width=True,
         )
 
     # === PAGINAÇÃO ===
@@ -150,7 +181,7 @@ def mostrar_consultar_cargas() -> None:
 
     st.dataframe(
         df_exibir,
-        width='stretch',
+        use_container_width=True,
         hide_index=True,
         column_config={
             "ID": st.column_config.NumberColumn("ID", width="small", format="%d"),
@@ -162,7 +193,7 @@ def mostrar_consultar_cargas() -> None:
     # Controles de paginação
     col_prev, col_pag_info, col_next = st.columns([1, 2, 1])
     with col_prev:
-        if st.button("⬅️ Anterior", disabled=(pagina <= 1), width='stretch'):
+        if st.button("⬅️ Anterior", disabled=(pagina <= 1), use_container_width=True):
             st.session_state["pagina_atual"] -= 1
             st.rerun()
     with col_pag_info:
@@ -172,16 +203,16 @@ def mostrar_consultar_cargas() -> None:
             unsafe_allow_html=True
         )
     with col_next:
-        if st.button("Próxima ➡️", disabled=(pagina >= total_paginas), width='stretch'):
+        if st.button("Próxima ➡️", disabled=(pagina >= total_paginas), use_container_width=True):
             st.session_state["pagina_atual"] += 1
             st.rerun()
 
     # === AÇÕES POR LINHA ===
     divider("Ações")
-    st.markdown("**Selecione uma carga para visualizar ou editar:**")
+    st.markdown("**Selecione uma carga para visualizar, editar ou imprimir:**")
 
     ids_disponiveis = df_pagina["ID"].tolist()
-    col_id, col_ver, col_editar = st.columns([1, 1, 1])
+    col_id, col_ver, col_editar, col_pdf = st.columns([1, 1, 1, 1])
 
     with col_id:
         id_selecionado = st.selectbox(
@@ -192,14 +223,31 @@ def mostrar_consultar_cargas() -> None:
         )
     with col_ver:
         st.markdown("<div style='margin-top: 1.75rem;'></div>", unsafe_allow_html=True)
-        if st.button("👁️ Ver Detalhes", width='stretch', key="btn_ver"):
+        if st.button("👁️ Ver Detalhes", use_container_width=True, key="btn_ver"):
             st.session_state["ver_detalhe_id"] = id_selecionado
             st.rerun()
     with col_editar:
         st.markdown("<div style='margin-top: 1.75rem;'></div>", unsafe_allow_html=True)
-        if st.button("✏️ Editar Carga", width='stretch', type="primary", key="btn_editar"):
+        if st.button("✏️ Editar Carga", use_container_width=True, type="primary", key="btn_editar"):
             st.session_state["editar_carga_id"] = id_selecionado
             st.rerun()
+    with col_pdf:
+        st.markdown("<div style='margin-top: 1.75rem;'></div>", unsafe_allow_html=True)
+        db_pdf = get_db()
+        try:
+            carga_sel = buscar_carga_por_id(db_pdf, id_selecionado)
+        finally:
+            db_pdf.close()
+        if carga_sel:
+            pdf_bytes = gerar_pdf_carga(carga_sel)
+            st.download_button(
+                label="🖨️ Imprimir PDF",
+                data=pdf_bytes,
+                file_name=f"carga_{id_selecionado}_{carga_sel.cliente.replace(' ', '_')}.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+                key="btn_pdf_acao",
+            )
 
 
 def _mostrar_detalhe(carga_id: int) -> None:
@@ -276,8 +324,21 @@ def _mostrar_detalhe(carga_id: int) -> None:
             st.markdown(info_row("Observações", carga.observacoes), unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # Botão editar
-    if st.button("✏️ Editar esta Carga", type="primary", key="btn_editar_do_detalhe"):
-        st.session_state.pop("ver_detalhe_id", None)
-        st.session_state["editar_carga_id"] = carga_id
-        st.rerun()
+    # Botões de ação
+    col_editar_det, col_pdf_det = st.columns(2)
+    with col_editar_det:
+        if st.button("✏️ Editar esta Carga", type="primary", key="btn_editar_do_detalhe", use_container_width=True):
+            st.session_state.pop("ver_detalhe_id", None)
+            st.session_state["editar_carga_id"] = carga_id
+            st.rerun()
+    with col_pdf_det:
+        pdf_bytes = gerar_pdf_carga(carga)
+        st.download_button(
+            label="🖨️ Baixar PDF do Cliente",
+            data=pdf_bytes,
+            file_name=f"carga_{carga.id}_{carga.cliente.replace(' ', '_')}.pdf",
+            mime="application/pdf",
+            use_container_width=True,
+            key="btn_pdf_detalhe",
+            help="Gera o documento de ordem de carga pronto para envio ao cliente",
+        )
