@@ -161,18 +161,18 @@ def _linha_usuario(u, admin_id: int) -> None:
     col_ed, col_senha, col_toggle = st.columns([1, 1, 1])
 
     with col_ed:
-        if st.button("✏️ Editar", key=f"editar_{u.id}", use_container_width=True):
+        if st.button("✏️ Editar", key=f"editar_{u.id}", width='stretch'):
             st.session_state["editar_usuario_id"] = u.id
             st.rerun()
 
     with col_senha:
-        if st.button("🔑 Senha", key=f"senha_{u.id}", use_container_width=True):
+        if st.button("🔑 Senha", key=f"senha_{u.id}", width='stretch'):
             st.session_state["redefinir_senha_id"] = u.id
             st.rerun()
 
     with col_toggle:
         label = "🔴 Desativar" if ativo else "🟢 Ativar"
-        if st.button(label, key=f"toggle_{u.id}", use_container_width=True):
+        if st.button(label, key=f"toggle_{u.id}", width='stretch'):
             db = get_db()
             try:
                 ok, msg = toggle_ativo(db, u.id, admin_id)
@@ -225,9 +225,9 @@ def _painel_editar_usuario(u) -> None:
 
             col_salvar, col_cancelar = st.columns(2)
             with col_salvar:
-                salvar = st.form_submit_button("💾 Salvar", use_container_width=True, type="primary")
+                salvar = st.form_submit_button("💾 Salvar", width='stretch', type="primary")
             with col_cancelar:
-                cancelar = st.form_submit_button("✖ Cancelar", use_container_width=True)
+                cancelar = st.form_submit_button("✖ Cancelar", width='stretch')
 
         if salvar:
             if not novo_nome.strip():
@@ -278,9 +278,9 @@ def _painel_redefinir_senha(u) -> None:
 
             col_s, col_c = st.columns(2)
             with col_s:
-                salvar = st.form_submit_button("🔐 Redefinir senha", use_container_width=True, type="primary")
+                salvar = st.form_submit_button("🔐 Redefinir senha", width='stretch', type="primary")
             with col_c:
-                cancelar = st.form_submit_button("✖ Cancelar", use_container_width=True)
+                cancelar = st.form_submit_button("✖ Cancelar", width='stretch')
 
         if salvar:
             if len(nova) < SENHA_MIN:
@@ -360,7 +360,7 @@ def _aba_novo_usuario() -> None:
         """, unsafe_allow_html=True)
 
         st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
-        submitted = st.form_submit_button("➕ Cadastrar Usuário", use_container_width=True, type="primary")
+        submitted = st.form_submit_button("➕ Cadastrar Usuário", width='stretch', type="primary")
 
     if submitted:
         erros = _validar_novo_usuario(novo_nome, novo_username, nova_senha, confirmar_senha)
@@ -479,7 +479,7 @@ def _painel_minha_conta(usuario_id: int, dentro_de_aba: bool = False) -> None:
         with col_d:
             confirmar_nova = st.text_input("🔑 Confirmar nova senha", type="password", placeholder="Repita a nova senha")
 
-        alterar = st.form_submit_button("🔐 Alterar Senha", use_container_width=True, type="primary")
+        alterar = st.form_submit_button("🔐 Alterar Senha", width='stretch', type="primary")
 
     if alterar:
         if not senha_atual:

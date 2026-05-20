@@ -115,11 +115,11 @@ def mostrar_nova_carga() -> None:
         with col_sub:
             submitted = st.form_submit_button(
                 "✅ Registrar Carga",
-                use_container_width=True,
+                width='stretch',
                 type="primary"
             )
         with col_limpar:
-            st.form_submit_button("🔄 Limpar", use_container_width=True)
+            st.form_submit_button("🔄 Limpar", width='stretch')
 
     # === PROCESSAMENTO ===
     if submitted:

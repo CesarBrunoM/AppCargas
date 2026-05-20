@@ -80,7 +80,7 @@ def mostrar_login() -> bool:
             with col_btn:
                 submitted = st.form_submit_button(
                     "Entrar →",
-                    use_container_width=True,
+                    width='stretch',
                     type="primary"
                 )
 

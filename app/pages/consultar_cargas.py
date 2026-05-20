@@ -136,7 +136,7 @@ def mostrar_consultar_cargas() -> None:
             data=buffer.getvalue(),
             file_name=f"cargas_{date.today().strftime('%Y%m%d')}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True,
+            width='stretch',
         )
 
     # PDF — relatório com os filtros aplicados
@@ -161,7 +161,7 @@ def mostrar_consultar_cargas() -> None:
             data=pdf_bytes,
             file_name=f"relatorio_cargas_{date.today().strftime('%Y%m%d')}.pdf",
             mime="application/pdf",
-            use_container_width=True,
+            width='stretch',
         )
 
     # === PAGINAÇÃO ===
@@ -181,7 +181,7 @@ def mostrar_consultar_cargas() -> None:
 
     st.dataframe(
         df_exibir,
-        use_container_width=True,
+        width='stretch',
         hide_index=True,
         column_config={
             "ID": st.column_config.NumberColumn("ID", width="small", format="%d"),
@@ -193,7 +193,7 @@ def mostrar_consultar_cargas() -> None:
     # Controles de paginação
     col_prev, col_pag_info, col_next = st.columns([1, 2, 1])
     with col_prev:
-        if st.button("⬅️ Anterior", disabled=(pagina <= 1), use_container_width=True):
+        if st.button("⬅️ Anterior", disabled=(pagina <= 1), width='stretch'):
             st.session_state["pagina_atual"] -= 1
             st.rerun()
     with col_pag_info:
@@ -203,7 +203,7 @@ def mostrar_consultar_cargas() -> None:
             unsafe_allow_html=True
         )
     with col_next:
-        if st.button("Próxima ➡️", disabled=(pagina >= total_paginas), use_container_width=True):
+        if st.button("Próxima ➡️", disabled=(pagina >= total_paginas), width='stretch'):
             st.session_state["pagina_atual"] += 1
             st.rerun()
 
@@ -223,12 +223,12 @@ def mostrar_consultar_cargas() -> None:
         )
     with col_ver:
         st.markdown("<div style='margin-top: 1.75rem;'></div>", unsafe_allow_html=True)
-        if st.button("👁️ Ver Detalhes", use_container_width=True, key="btn_ver"):
+        if st.button("👁️ Ver Detalhes", width='stretch', key="btn_ver"):
             st.session_state["ver_detalhe_id"] = id_selecionado
             st.rerun()
     with col_editar:
         st.markdown("<div style='margin-top: 1.75rem;'></div>", unsafe_allow_html=True)
-        if st.button("✏️ Editar Carga", use_container_width=True, type="primary", key="btn_editar"):
+        if st.button("✏️ Editar Carga", width='stretch', type="primary", key="btn_editar"):
             st.session_state["editar_carga_id"] = id_selecionado
             st.rerun()
     with col_pdf:
@@ -245,7 +245,7 @@ def mostrar_consultar_cargas() -> None:
                 data=pdf_bytes,
                 file_name=f"carga_{id_selecionado}_{carga_sel.cliente.replace(' ', '_')}.pdf",
                 mime="application/pdf",
-                use_container_width=True,
+                width='stretch',
                 key="btn_pdf_acao",
             )
 
@@ -327,7 +327,7 @@ def _mostrar_detalhe(carga_id: int) -> None:
     # Botões de ação
     col_editar_det, col_pdf_det = st.columns(2)
     with col_editar_det:
-        if st.button("✏️ Editar esta Carga", type="primary", key="btn_editar_do_detalhe", use_container_width=True):
+        if st.button("✏️ Editar esta Carga", type="primary", key="btn_editar_do_detalhe", width='stretch'):
             st.session_state.pop("ver_detalhe_id", None)
             st.session_state["editar_carga_id"] = carga_id
             st.rerun()
@@ -338,7 +338,7 @@ def _mostrar_detalhe(carga_id: int) -> None:
             data=pdf_bytes,
             file_name=f"carga_{carga.id}_{carga.cliente.replace(' ', '_')}.pdf",
             mime="application/pdf",
-            use_container_width=True,
+            width='stretch',
             key="btn_pdf_detalhe",
             help="Gera o documento de ordem de carga pronto para envio ao cliente",
         )

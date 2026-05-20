@@ -122,7 +122,7 @@ def mostrar_editar_carga(carga_id: int) -> None:
 
             submitted_op = st.form_submit_button(
                 "💾 Salvar Alterações Operacionais",
-                use_container_width=True,
+                width='stretch',
                 type="primary"
             )
 
@@ -198,7 +198,7 @@ def mostrar_editar_carga(carga_id: int) -> None:
 
             submitted_ag = st.form_submit_button(
                 "💾 Salvar Dados do Agendamento",
-                use_container_width=True,
+                width='stretch',
                 type="primary"
             )
 
